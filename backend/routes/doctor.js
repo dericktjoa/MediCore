@@ -141,7 +141,11 @@ router.get('/patients-with-appointments', auth, async (req, res) => {
     const appointments = await Appointment.find({ doctorId }).sort({ date: 1 });
     const patientIds = [...new Set(appointments.map(app => app.patientId.toString()))];
 
-    const patients = await User.find({ _id: { $in: patientIds }, role: 'patient' });
+    const patients = await User.find({
+      _id: { $in: patientIds },
+      role: 'patient',
+      admissionStatus: { $ne: 'discharged' }
+    });
 
     const patientsWithAppointments = patients.map(patient => {
       const patientAppointments = appointments.filter(app => app.patientId.toString() === patient._id.toString());
@@ -291,20 +295,12 @@ router.get('/prescriptions/:patientId', auth, async (req, res) => {
 router.get('/appointments', auth, async (req, res) => {
   try {
     const doctorId = req.user.id;
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
-    const monday = new Date(today);
-    monday.setDate(today.getDate() - ((today.getDay() + 6) % 7));
-    const sunday = new Date(monday);
-    sunday.setDate(monday.getDate() + 7);
-    
     const appointments = await Appointment.find({
       doctorId,
-      status: 'scheduled',
-      date: { $gte: monday, $lt: sunday }
+      status: 'scheduled'
     })
       .populate('patientId', 'firstName lastName')
-      .sort({ time: 1 });
+      .sort({ date: 1, time: 1 });
     
     res.json(appointments);
   } catch (error) {
@@ -338,9 +334,9 @@ router.put('/patients/:id/discharge', auth, async (req, res) => {
     });
     if (!hasRelationship) return res.status(403).send({ error: 'Patient is not under your care' });
     const patient = await User.findOneAndUpdate(
-      { _id: req.params.id, role: 'patient' },
+      { _id: req.params.id, role: 'patient', admissionStatus: { $ne: 'discharged' } },
       { admissionStatus: 'discharged' },
-      { new: true }
+      { new: true, runValidators: true }
     ).select('firstName lastName admissionStatus');
     if (!patient) return res.status(404).send({ error: 'Patient not found' });
     res.json(patient);

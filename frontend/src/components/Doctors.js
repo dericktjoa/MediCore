@@ -198,7 +198,7 @@ export default function DoctorDashboard() {
       });
       if (response.ok) {
         const data = await response.json();
-        setPatients(data);
+        setPatients(data.filter((patient) => patient.admissionStatus !== 'discharged'));
       } else {
         console.error('Failed to fetch patients with appointments');
       }
@@ -338,7 +338,7 @@ export default function DoctorDashboard() {
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         <Card>
           <CardHeader icon={Calendar}>
-            <CardTitle className="text-sm font-medium">This Week&apos;s Active Appointments</CardTitle>
+            <CardTitle className="text-sm font-medium">All Active Appointments</CardTitle>
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">
@@ -350,7 +350,7 @@ export default function DoctorDashboard() {
               </p>
             ) : (
               <p className="text-xs text-gray-500">
-                No active appointments this week
+                No active appointments
               </p>
             )}
           </CardContent>
@@ -360,7 +360,7 @@ export default function DoctorDashboard() {
               className="w-full text-sm text-gray-500 hover:text-gray-900 transition-colors"
               onClick={() => setShowAppointments(!showAppointments)}
             >
-              {showAppointments ? "Hide" : "View"} This Week&apos;s Appointments
+              {showAppointments ? "Hide" : "View"} All Appointments
               <ChevronDown className={`h-4 w-4 ml-2 transition-transform ${showAppointments ? "rotate-180" : ""}`} />
             </Button>
           </CardFooter>
@@ -391,7 +391,7 @@ export default function DoctorDashboard() {
                 ))
               ) : (
                 <p className="text-sm text-gray-500 text-center py-4">
-                  No active appointments this week
+                  No active appointments
                 </p>
               )}
             </div>
@@ -449,7 +449,7 @@ export default function DoctorDashboard() {
             <ul className="space-y-2">
               <li className="flex items-center space-x-2">
                 <Clock className="h-4 w-4 text-blue-600" />
-                <span>{appointments.length} active appointment(s) this week</span>
+                <span>{appointments.length} active appointment(s)</span>
               </li>
               <li className="flex items-center space-x-2">
                 <FileText className="h-4 w-4 text-blue-600" />

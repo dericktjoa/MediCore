@@ -5,6 +5,7 @@
   "scripts": {
     "start": "node server.js",
     "data": "node createAdmin.js && node createDoctors.js",
+    "reset-data": "node resetData.js",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "keywords": [],

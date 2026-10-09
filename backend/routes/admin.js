@@ -142,7 +142,7 @@ router.get('/total-doctors', auth, async (req, res) => {
 
 router.get('/total-patients', auth, async (req, res) => {
   try {
-    const totalPatients = await User.countDocuments({ role: 'patient' });
+    const totalPatients = await User.countDocuments(admittedPatientFilter);
     res.json({ totalPatients, bedCapacity: BED_CAPACITY });
   } catch (error) {
     console.error('Error fetching total patients:', error);
@@ -156,7 +156,7 @@ router.get('/doctor-overview', auth, async (req, res) => {
     const doctorOverview = await Promise.all(doctors.map(async (doctor) => {
       const patientIds = await Appointment.distinct('patientId', {
         doctorId: doctor._id,
-        status: 'scheduled'
+        status: { $ne: 'cancelled' }
       });
       const admittedPatients = await User.countDocuments({
         _id: { $in: patientIds },
