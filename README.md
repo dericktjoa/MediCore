@@ -1,178 +1,460 @@
-<h1>MediCore Hospital Management System</h1>
+# MediCore Hospital Management System
 
-<p>MediCore adalah aplikasi manajemen rumah sakit berbasis MERN yang menyediakan
+MediCore adalah aplikasi manajemen rumah sakit berbasis web dengan fitur
 autentikasi admin, dokter, dan pasien; pengaturan jadwal dokter; appointment;
-prescription; serta dashboard administrasi.</p>
+resep; dan dashboard administrasi.
 
-<h2>Struktur Project</h2>
+## Teknologi
 
-<ul>
-  <li><code>backend</code> - API Node.js dan Express.</li>
-  <li><code>frontend</code> - aplikasi React.</li>
-  <li>MongoDB - database lokal yang diakses melalui backend.</li>
-</ul>
+- **Frontend:** React, React Router, Tailwind CSS, dan Lucide React.
+- **Backend:** Node.js, Express, JWT, bcrypt, dan dotenv.
+- **Database:** MongoDB dengan Mongoose.
+- **Container:** Docker dan Docker Compose.
 
-<h2>Prasyarat</h2>
+## Struktur Project
 
-Install aplikasi berikut sebelum menjalankan project:
+```text
+.
+├── backend/             # API Node.js + Express
+├── frontend/            # Aplikasi React
+├── Dockerfile           # Image app: frontend build + backend
+├── docker-compose.yml   # App, MongoDB, dan Ubuntu OS
+└── .dockerignore
+```
 
-<ul>
-  <li>Node.js LTS dan npm.</li>
-  <li>MongoDB Community Server untuk Windows.</li>
-  <li>Git, jika repository diambil menggunakan Git.</li>
-  <li>MongoDB Compass (opsional) untuk melihat isi database.</li>
-</ul>
+## Arsitektur Docker
 
-<p>Frontend tidak terhubung langsung ke MongoDB. Alurnya adalah:</p>
+Project ini menyediakan tiga container:
 
-<pre><code>Browser → Frontend React → Backend Express → MongoDB</code></pre>
+| Container | Isi | Port |
+| --- | --- | --- |
+| `medicore-app` | Frontend React hasil build dan backend Node.js + Express | `5000` |
+| `medicore-mongodb` | Database MongoDB | `27017` |
+| `medicore-os` | Ubuntu 22.04 untuk kebutuhan praktikum | - |
 
-<p>Untuk instalasi lokal, gunakan <code>mongod</code> sebagai server MongoDB.
-<code>mongosh</code> hanya diperlukan jika ingin mengakses database melalui
-terminal. <code>mongos</code> tidak diperlukan.</p>
+Container `os` berdiri sendiri untuk memenuhi kebutuhan praktikum. Container
+tersebut bukan host untuk container aplikasi atau database. Setiap container
+tetap menggunakan base image Linux-nya sendiri.
 
-<h2>Menjalankan Project dari Repository</h2>
+Alur aplikasi:
 
-<h3>1. Download atau clone repository</h3>
+```text
+Browser
+  ↓ http://localhost:5000
+medicore-app
+  ├── React static build
+  └── Express REST API
+        ↓ mongodb://mongodb:27017/medicore
+medicore-mongodb
+```
 
-<p>Dengan Git:</p>
+## Prasyarat
 
-<pre><code>git clone https://github.com/KshithijSinghania/Hospital-Management-System.git
-cd Hospital-Management-System</code></pre>
+Untuk menjalankan versi Docker:
 
-<p>Jika menggunakan file ZIP, ekstrak file tersebut lalu buka terminal di folder
-utama project.</p>
+- Docker Desktop.
+- Docker Compose Plugin.
+- Git, jika repository diambil dari GitHub.
 
-<h3>2. Jalankan MongoDB lokal</h3>
+Pastikan Docker Desktop sudah berjalan sebelum menjalankan perintah Docker.
+Verifikasi dengan:
 
-<p>Setelah MongoDB Community Server terinstall, buka PowerShell sebagai
-Administrator:</p>
+```powershell
+docker info
+```
 
-<pre><code>Get-Service MongoDB
-Start-Service MongoDB
-Test-NetConnection 127.0.0.1 -Port 27017</code></pre>
+Jika bagian `Server` menampilkan informasi Docker Engine, Docker siap
+digunakan.
 
-<p>Nilai <code>TcpTestSucceeded</code> harus <code>True</code>. Jika service
-MongoDB sudah berstatus <code>Running</code>, perintah
-<code>Start-Service MongoDB</code> tidak perlu dijalankan lagi.</p>
+## Menjalankan dengan Docker
 
-<h3>3. Siapkan dan jalankan backend</h3>
+### 1. Clone repository
 
-<p>Buka terminal pertama dari folder utama project:</p>
+```powershell
+git clone https://github.com/dericktjoa/Uncontainered_MediCore.git
+cd Uncontainered_MediCore
+```
 
-<pre><code>cd backend
-npm install</code></pre>
+Jika folder lokal project sudah ada, cukup buka PowerShell pada folder tersebut.
 
-<p>Buat file <code>backend/.env</code>. File ini tidak disertakan di repository
-karena berisi konfigurasi lokal.</p>
+### 2. Build dan jalankan semua container
 
-<pre><code>MONGO_URI=mongodb://127.0.0.1:27017/medicore
-PORT=5000</code></pre>
+```powershell
+docker compose up -d --build
+```
 
-<p>Tambahkan data awal admin dan dokter pada database lokal:</p>
+Perintah ini akan:
 
-<pre><code>npm run data</code></pre>
+1. Membuat production build frontend React.
+2. Menginstal dependency production backend.
+3. Membuat image `app`.
+4. Mengambil image MongoDB dan Ubuntu.
+5. Membuat network Docker.
+6. Menjalankan tiga container.
+7. Menunggu MongoDB sehat sebelum container app dijalankan.
 
-<p>Perintah tersebut menjalankan <code>createAdmin.js</code> dan
-<code>createDoctors.js</code>. Gunakan perintah ini pada database baru. Jika
-admin sudah pernah dibuat, perintah dapat berhenti karena email admin duplikat.
-Dalam kondisi tersebut, buat dokter dengan:</p>
+### 3. Periksa status container
 
-<pre><code>node createDoctors.js</code></pre>
+```powershell
+docker compose ps
+```
 
-<p>Jalankan backend dan biarkan terminal ini tetap terbuka:</p>
+Container yang diharapkan:
 
-<pre><code>npm start</code></pre>
+```text
+medicore-app
+medicore-mongodb
+medicore-os
+```
 
-<p>Backend tersedia di
-<a href="http://localhost:5000" target="_blank" rel="noopener noreferrer">
-http://localhost:5000</a>.</p>
+### 4. Buat data awal admin dan dokter
 
-<h3>4. Siapkan dan jalankan frontend</h3>
+Jalankan satu kali pada database baru:
 
-<p>Buka terminal kedua dari folder utama project:</p>
+```powershell
+docker compose exec app node createAdmin.js
+docker compose exec app node createDoctors.js
+```
 
-<pre><code>cd frontend
-npm install</code></pre>
+Perintah tersebut dijalankan dari working directory backend di dalam
+container `app`. Jika email admin atau dokter sudah pernah dibuat, error
+duplicate dapat muncul dan script tersebut tidak perlu dijalankan ulang.
 
-<p>Buat file <code>frontend/.env</code>:</p>
+### 5. Buka aplikasi
 
-<pre><code>REACT_APP_API_URL=http://localhost:5000</code></pre>
+Buka browser pada:
 
-<p>Jalankan frontend:</p>
+```text
+http://localhost:5000
+```
 
-<pre><code>npm start</code></pre>
+Frontend React dan API backend menggunakan container yang sama:
 
-<p>Browser biasanya terbuka otomatis. Jika tidak, buka:
-<a href="http://localhost:3000" target="_blank" rel="noopener noreferrer">
-http://localhost:3000</a>.</p>
+```text
+http://localhost:5000/          # Frontend
+http://localhost:5000/login     # Halaman login
+http://localhost:5000/api/login # API login
+```
 
-<h2>Urutan Singkat Setelah Instalasi</h2>
+### 6. Melihat log
 
-<p>Pastikan MongoDB berjalan, kemudian gunakan dua terminal:</p>
+```powershell
+docker compose logs -f app
+docker compose logs -f mongodb
+```
 
-<pre><code>Terminal 1
+Tekan `Ctrl+C` untuk berhenti melihat log tanpa menghentikan container.
+
+### 7. Menghentikan aplikasi
+
+Menghentikan container tanpa menghapus data:
+
+```powershell
+docker compose down
+```
+
+Menghentikan container dan menghapus volume MongoDB:
+
+```powershell
+docker compose down -v
+```
+
+Perintah `down -v` akan menghapus seluruh data database lokal. Gunakan hanya
+jika ingin memulai dari database kosong.
+
+## Akun dan Pengujian Fitur
+
+### Admin
+
+Data akun admin dibuat oleh `backend/createAdmin.js`. Periksa file tersebut
+untuk email dan password yang digunakan pada environment lokal.
+
+Admin dapat:
+
+- Melihat dashboard statistik.
+- Melihat jumlah dokter dan pasien.
+- Menambahkan dokter.
+- Menambahkan admin.
+- Mengubah profil.
+- Mengelola status pasien.
+
+### Dokter
+
+Data dokter dibuat oleh `backend/createDoctors.js`. Password default dokter
+yang digunakan script adalah:
+
+```text
+Doctor123!
+```
+
+Dokter dapat:
+
+- Membuat dan menghapus jadwal.
+- Melihat appointment.
+- Menyelesaikan appointment.
+- Melihat pasien.
+- Membuat, mengedit, dan menghapus resep.
+- Mengubah profil.
+
+### Pasien
+
+Pasien dibuat melalui menu **Sign Up**. Pasien dapat:
+
+- Melihat daftar dokter.
+- Melihat slot yang tersedia.
+- Membuat dan membatalkan appointment.
+- Memulihkan appointment yang dibatalkan.
+- Melihat care team.
+- Melihat resep.
+- Mengubah profil.
+
+Urutan pengujian yang disarankan:
+
+```text
+1. Jalankan container.
+2. Buat data awal admin dan dokter.
+3. Login sebagai dokter dan buat jadwal.
+4. Buat akun pasien melalui Sign Up.
+5. Login sebagai pasien dan buat appointment.
+6. Login sebagai dokter dan periksa appointment pasien.
+7. Buat resep dari dashboard dokter.
+8. Login sebagai pasien dan periksa resep.
+9. Login sebagai admin dan periksa dashboard.
+```
+
+## Menjalankan Tanpa Docker
+
+### Prasyarat
+
+- Node.js LTS dan npm.
+- MongoDB Community Server.
+
+### Backend
+
+Buat file `backend/.env`:
+
+```env
+MONGO_URI=mongodb://127.0.0.1:27017/medicore
+PORT=5000
+```
+
+Jalankan:
+
+```powershell
 cd backend
 npm install
 npm run data
-npm start</code></pre>
+npm start
+```
 
-<pre><code>Terminal 2
+Backend tersedia di `http://localhost:5000`.
+
+### Frontend
+
+Buat file `frontend/.env`:
+
+```env
+REACT_APP_API_URL=http://localhost:5000
+```
+
+Pada terminal lain:
+
+```powershell
 cd frontend
 npm install
-npm start</code></pre>
+npm start
+```
 
-<p>Untuk penggunaan berikutnya, <code>npm install</code> dan
-<code>npm run data</code> tidak perlu diulang kecuali dependency atau database
-belum disiapkan.</p>
+Frontend development tersedia di `http://localhost:3000`.
 
-<h2>Akun Awal</h2>
+## Konfigurasi Docker
 
-<p><code>npm run data</code> membuat akun dokter dari
-<code>backend/createDoctors.js</code>. Password default dokter yang digunakan
-script tersebut adalah <code>Doctor123!</code>. Segera ubah password pada
-lingkungan nyata dan jangan membagikan kredensial default.</p>
+Pada Docker Compose, backend menggunakan:
 
-<p>Akun admin dibuat oleh <code>backend/createAdmin.js</code>. Periksa file
-tersebut sebelum menjalankan script dan ubah data admin sesuai kebutuhan lokal.</p>
+```text
+MONGO_URI=mongodb://mongodb:27017/medicore
+PORT=5000
+```
 
-<h2>Akses Database Lokal</h2>
+Hostname `mongodb` adalah nama service Docker Compose, bukan `localhost`.
+Frontend production menggunakan URL API relatif seperti `/api/login`, sehingga
+frontend dan backend dapat disajikan melalui port `5000` yang sama.
 
-<p>Nama database yang digunakan adalah <code>medicore</code>. Jika
-<code>mongosh</code> tersedia:</p>
+Database menggunakan named volume:
 
-<pre><code>mongosh "mongodb://127.0.0.1:27017/medicore"
-show collections
-exit</code></pre>
+```text
+mongodb-data
+```
 
-<p>Untuk MongoDB Compass, gunakan connection string:</p>
+Volume tersebut membuat data tetap ada setelah `docker compose down`.
 
-<pre><code>mongodb://127.0.0.1:27017</code></pre>
+## Troubleshooting
 
-<h2>Troubleshooting</h2>
+### Docker API tidak dapat terhubung
 
-<ul>
-  <li><code>ECONNREFUSED 127.0.0.1:27017</code>: jalankan service
-  <code>MongoDB</code> dan pastikan port <code>27017</code> terbuka.</li>
-  <li>Frontend tidak dapat mengakses API: pastikan backend berjalan di port
-  <code>5000</code> dan <code>frontend/.env</code> berisi
-  <code>http://localhost:5000</code>.</li>
-  <li>Port <code>5000</code> atau <code>3000</code> sedang digunakan: hentikan
-  aplikasi lain atau ubah konfigurasi port yang sesuai.</li>
-  <li>Data MongoDB Atlas tidak otomatis tersalin ke database lokal. Lakukan
-  export/import secara terpisah jika data lama diperlukan.</li>
-</ul>
+Error seperti berikut berarti Docker Engine belum berjalan:
 
-<h2>Keamanan Repository</h2>
+```text
+failed to connect to the docker API
+```
 
-<p>File <code>.env</code>, dependency, hasil build, log, dan file database lokal
-diabaikan oleh Git melalui <code>.gitignore</code>. Jangan commit password,
-JWT secret, atau connection string database yang berisi kredensial.</p>
+Solusi:
 
-<h2>Teknologi</h2>
+1. Jalankan Docker Desktop.
+2. Tunggu sampai status Docker Desktop menunjukkan engine siap.
+3. Jalankan `docker info`.
+4. Ulangi `docker compose up -d --build`.
 
-<ul>
-  <li>React, React Router, Tailwind CSS, dan Lucide React.</li>
-  <li>Node.js, Express, Mongoose, JWT, bcrypt, dan dotenv.</li>
-  <li>MongoDB Community Server.</li>
-</ul>
+Pada Windows, context yang umum digunakan adalah:
+
+```powershell
+docker context use desktop-linux
+```
+
+### Container tidak berjalan
+
+Periksa log:
+
+```powershell
+docker compose ps
+docker compose logs app
+docker compose logs mongodb
+```
+
+### Frontend tidak dapat mengakses API
+
+Pastikan frontend dibuka melalui:
+
+```text
+http://localhost:5000
+```
+
+Jangan menggunakan `http://localhost:3000` ketika memakai mode Docker
+production.
+
+### MongoDB tidak tersedia
+
+Pastikan healthcheck MongoDB sudah `healthy`:
+
+```powershell
+docker compose ps
+docker compose logs mongodb
+```
+
+### Data awal duplicate
+
+Jika admin atau dokter sudah pernah dibuat, jangan jalankan script seed
+berulang kali. Untuk mengulang dari database kosong:
+
+```powershell
+docker compose down -v
+docker compose up -d --build
+docker compose exec app node createAdmin.js
+docker compose exec app node createDoctors.js
+```
+
+## Push Perubahan ke GitHub
+
+### 1. Periksa file yang akan dikirim
+
+Jalankan dari root project:
+
+```powershell
+git status
+```
+
+File yang seharusnya ikut dikirim antara lain:
+
+```text
+README.md
+Dockerfile
+docker-compose.yml
+.dockerignore
+backend/server.js
+```
+
+File berikut tidak boleh dikirim:
+
+```text
+node_modules/
+frontend/build/
+backend/.env
+frontend/.env
+mongodb-data/
+```
+
+Aturan tersebut sudah dicantumkan di `.gitignore` dan `.dockerignore`.
+
+### 2. Tambahkan file ke staging
+
+```powershell
+git add README.md Dockerfile docker-compose.yml .dockerignore backend/server.js
+```
+
+Jika ingin memasukkan dokumentasi Markdown yang dibuat:
+
+```powershell
+git add TEKNOLOGI-APLIKASI.md info-detail-apk.md
+```
+
+Periksa staging:
+
+```powershell
+git diff --cached --stat
+git diff --cached --check
+```
+
+### 3. Commit
+
+```powershell
+git commit -m "Add Docker deployment for MediCore" -m "Co-authored-by: Copilot <223556219+Copilot@users.noreply.github.com>"
+```
+
+Jika Git meminta identitas:
+
+```powershell
+git config user.name "Nama Anda"
+git config user.email "email-anda@example.com"
+```
+
+### 4. Push ke GitHub
+
+Pastikan remote mengarah ke repository yang benar:
+
+```powershell
+git remote -v
+```
+
+Kemudian push branch `main`:
+
+```powershell
+git push -u origin main
+```
+
+Jika diminta login, gunakan autentikasi GitHub yang tersedia. Password akun
+GitHub biasa tidak digunakan untuk Git over HTTPS; gunakan GitHub CLI,
+credential manager, atau personal access token sesuai konfigurasi Anda.
+
+### 5. Verifikasi di GitHub
+
+Setelah push selesai:
+
+1. Buka repository GitHub.
+2. Pastikan `README.md` menampilkan instruksi Docker terbaru.
+3. Pastikan `Dockerfile`, `docker-compose.yml`, dan `.dockerignore` tersedia.
+4. Pastikan file `.env`, `node_modules`, build output, dan data MongoDB tidak
+   ikut muncul.
+
+## Keamanan
+
+- Jangan commit file `.env`.
+- Jangan commit password akun default.
+- Jangan commit JWT secret.
+- Ganti password default dokter pada environment nyata.
+- Pindahkan secret JWT dari source code ke environment variable sebelum
+  deployment production.
+- Batasi CORS dan gunakan HTTPS pada deployment publik.
+
+## Lisensi
+
+Project ini digunakan untuk kebutuhan pembelajaran dan praktikum.
