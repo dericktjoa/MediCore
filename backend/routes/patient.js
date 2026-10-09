@@ -4,8 +4,17 @@ const jwt = require('jsonwebtoken');
 const Appointment = require('../models/Appointment');
 const Doctor = require('../models/Doctor');
 const Prescription = require('../models/Prescription');
+const DoctorSchedule = require('../models/DoctorSchedule');
 
 const router = express.Router();
+
+const slotToMinutes = (slot) => {
+  const [time, period] = slot.split(' ');
+  let [hours, minutes] = time.split(':').map(Number);
+  if (period === 'PM' && hours !== 12) hours += 12;
+  if (period === 'AM' && hours === 12) hours = 0;
+  return hours * 60 + minutes;
+};
 
 const auth = (req, res, next) => {
   const token = req.header('Authorization')?.replace('Bearer ', '');
@@ -59,6 +68,14 @@ router.put('/profile', auth, async (req, res) => {
 router.post('/book-appointment', auth, async (req, res) => {
   try {
     const { doctorId, date, time, reason } = req.body;
+    const schedule = await DoctorSchedule.findOne({ doctorId, date });
+    if (!schedule || !schedule.slots.includes(time)) {
+      return res.status(400).send({ error: 'Doctor is not available at the selected date and time' });
+    }
+    const existingAppointment = await Appointment.findOne({ doctorId, date, time, status: 'scheduled' });
+    if (existingAppointment) {
+      return res.status(409).send({ error: 'This appointment slot has already been booked' });
+    }
     const appointment = new Appointment({
       patientId: req.user.id,
       doctorId,
@@ -77,10 +94,13 @@ router.post('/book-appointment', auth, async (req, res) => {
 router.get('/available-slots', auth, async (req, res) => {
   try {
     const { doctorId, date } = req.query;
-    const bookedAppointments = await Appointment.find({ doctorId, date });
+    const schedule = await DoctorSchedule.findOne({ doctorId, date });
+    if (!schedule) return res.json([]);
+    const bookedAppointments = await Appointment.find({ doctorId, date, status: 'scheduled' });
     const bookedTimes = bookedAppointments.map(app => app.time);
-    const allTimeSlots = ['10:00 AM', '11:00 AM', '12:00 PM', '1:00 PM', '2:00 PM', '3:00 PM', '4:00 PM', '5:00 PM'];
-    const availableSlots = allTimeSlots.filter(slot => !bookedTimes.includes(slot));
+    const availableSlots = schedule.slots
+      .filter(slot => !bookedTimes.includes(slot))
+      .sort((a, b) => slotToMinutes(a) - slotToMinutes(b));
     res.json(availableSlots);
   } catch (error) {
     console.error(error);
@@ -91,15 +111,9 @@ router.get('/available-slots', auth, async (req, res) => {
 router.get('/appointments', auth, async (req, res) => {
   try {
     const patientId = req.user.id;
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);  // Set to start of day
-    
     const appointments = await Appointment.find({
       patientId,
-      date: {
-        $gte: today,
-        $lt: new Date(today.getTime() + 24 * 60 * 60 * 1000) // End of day
-      }
+      status: 'scheduled'
     })
       .populate('doctorId', 'firstName lastName')
       .sort({ time: 1 });
@@ -107,6 +121,38 @@ router.get('/appointments', auth, async (req, res) => {
     res.json(appointments);
   } catch (error) {
     console.error('Error fetching appointments:', error);
+    res.status(500).send({ error: 'Server error' });
+  }
+});
+
+router.post('/appointments/:id/restore', auth, async (req, res) => {
+  try {
+    const appointment = await Appointment.findOneAndUpdate(
+      { _id: req.params.id, patientId: req.user.id, status: 'cancelled' },
+      { status: 'scheduled' },
+      { new: true }
+    );
+    if (!appointment) {
+      return res.status(404).send({ error: 'Cancelled appointment not found' });
+    }
+    res.json({ message: 'Appointment restored successfully', appointment });
+  } catch (error) {
+    console.error('Error restoring appointment:', error);
+    res.status(500).send({ error: 'Server error' });
+  }
+});
+
+router.delete('/appointments/:id', auth, async (req, res) => {
+  try {
+    const appointment = await Appointment.findOneAndUpdate(
+      { _id: req.params.id, patientId: req.user.id, status: 'scheduled' },
+      { status: 'cancelled' },
+      { new: true }
+    );
+    if (!appointment) return res.status(404).send({ error: 'Active appointment not found' });
+    res.json({ message: 'Appointment cancelled', appointment });
+  } catch (error) {
+    console.error('Error cancelling appointment:', error);
     res.status(500).send({ error: 'Server error' });
   }
 });

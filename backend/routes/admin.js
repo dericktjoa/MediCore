@@ -7,6 +7,15 @@ const User = require('../models/User');
 const Appointment = require('../models/Appointment');
 
 const router = express.Router();
+const HEALTHCARE_STAFF_COUNT = 20;
+const BED_CAPACITY = 100;
+const admittedPatientFilter = {
+  role: 'patient',
+  $or: [
+    { admissionStatus: 'admitted' },
+    { admissionStatus: { $exists: false } }
+  ]
+};
 
 const auth = (req, res, next) => {
   const token = req.header('Authorization')?.replace('Bearer ', '');
@@ -23,6 +32,32 @@ const auth = (req, res, next) => {
     res.status(401).send({ error: 'Invalid token' });
   }
 };
+
+router.get('/healthcare-staff-count', auth, (req, res) => {
+  res.json({ healthcareStaffCount: HEALTHCARE_STAFF_COUNT });
+});
+
+router.put('/patient-status/:id', auth, async (req, res) => {
+  if (req.user.role !== 'admin') {
+    return res.status(403).send({ error: 'Admin access required' });
+  }
+  const { admissionStatus } = req.body;
+  if (!['admitted', 'discharged'].includes(admissionStatus)) {
+    return res.status(400).send({ error: 'Invalid admission status' });
+  }
+  try {
+    const patient = await User.findOneAndUpdate(
+      { _id: req.params.id, role: 'patient' },
+      { admissionStatus },
+      { new: true }
+    ).select('firstName lastName admissionStatus');
+    if (!patient) return res.status(404).send({ error: 'Patient not found' });
+    res.json(patient);
+  } catch (error) {
+    console.error('Error updating patient status:', error);
+    res.status(500).send({ error: 'Server error' });
+  }
+});
 
 router.post('/add-doctor', auth, async (req, res) => {
   if (req.user.role !== 'admin') {
@@ -108,7 +143,7 @@ router.get('/total-doctors', auth, async (req, res) => {
 router.get('/total-patients', auth, async (req, res) => {
   try {
     const totalPatients = await User.countDocuments({ role: 'patient' });
-    res.json({ totalPatients });
+    res.json({ totalPatients, bedCapacity: BED_CAPACITY });
   } catch (error) {
     console.error('Error fetching total patients:', error);
     res.status(500).send({ error: 'Server error' });
@@ -119,11 +154,18 @@ router.get('/doctor-overview', auth, async (req, res) => {
   try {
     const doctors = await Doctor.find().select('firstName lastName specialty');
     const doctorOverview = await Promise.all(doctors.map(async (doctor) => {
-      const uniquePatients = await Appointment.distinct('patientId', { doctorId: doctor._id });
+      const patientIds = await Appointment.distinct('patientId', {
+        doctorId: doctor._id,
+        status: 'scheduled'
+      });
+      const admittedPatients = await User.countDocuments({
+        _id: { $in: patientIds },
+        ...admittedPatientFilter
+      });
       return {
         name: `${doctor.firstName} ${doctor.lastName}`,
         specialty: doctor.specialty,
-        patients: uniquePatients.length
+        patients: admittedPatients
       };
     }));
     res.json(doctorOverview);
@@ -135,14 +177,7 @@ router.get('/doctor-overview', auth, async (req, res) => {
 
 router.get('/patient-overview', auth, async (req, res) => {
   try {
-    const patients = await User.find({ role: 'patient' }).select('firstName lastName');
-    const patientOverview = await Promise.all(patients.map(async (patient) => {
-      const appointmentCount = await Appointment.countDocuments({ patientId: patient._id });
-      return {
-        name: `${patient.firstName} ${patient.lastName}`,
-        appointments: appointmentCount
-      };
-    }));
+    const patientOverview = await User.find(admittedPatientFilter).select('firstName lastName');
     res.json(patientOverview);
   } catch (error) {
     console.error('Error fetching patient overview:', error);

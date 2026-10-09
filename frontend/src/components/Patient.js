@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Calendar, Clock, FileText, User, Users, ChevronDown, Home, UserCircle, Calendar as CalendarIcon, Eye, EyeOff, Hospital } from 'lucide-react';
+import { Calendar, Clock, FileText, User, Users, ChevronDown, Home, UserCircle, Calendar as CalendarIcon, Hospital } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 
 const Button = ({ children, variant = 'primary', className = '', ...props }) => (
@@ -65,6 +65,47 @@ const Select = ({ children, ...props }) => (
   </select>
 );
 
+const getWeekDates = () => {
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  const mondayOffset = (today.getDay() + 6) % 7;
+  today.setDate(today.getDate() - mondayOffset);
+  return Array.from({ length: 7 }, (_, index) => {
+    const date = new Date(today);
+    date.setDate(today.getDate() + index);
+    return date.toISOString().split('T')[0];
+  });
+};
+
+const formatDay = (date) => new Date(`${date}T00:00:00`).toLocaleDateString('id-ID', {
+  weekday: 'long'
+});
+
+const slotToMinutes = (slot) => {
+  const [time, period] = slot.split(' ');
+  let [hours, minutes] = time.split(':').map(Number);
+  if (period === 'PM' && hours !== 12) hours += 12;
+  if (period === 'AM' && hours === 12) hours = 0;
+  return hours * 60 + minutes;
+};
+
+const groupSlots = (slots) => {
+  const sorted = [...slots].sort((a, b) => slotToMinutes(a) - slotToMinutes(b));
+  const groups = [];
+  sorted.forEach((slot) => {
+    const current = groups[groups.length - 1];
+    if (current && slotToMinutes(slot) === slotToMinutes(current[current.length - 1]) + 60) {
+      current.push(slot);
+    } else {
+      groups.push([slot]);
+    }
+  });
+  return groups.map((group) => group.length > 1
+    ? `${group[0]} - ${group[group.length - 1]}`
+    : group[0]
+  );
+};
+
 export default function PatientDashboard() {
   const [showAppointments, setShowAppointments] = useState(false);
   const [showPrescriptions, setShowPrescriptions] = useState(false);
@@ -73,6 +114,8 @@ export default function PatientDashboard() {
   const [patientInfo, setPatientInfo] = useState(null);
   const [editedInfo, setEditedInfo] = useState(null);
   const [doctors, setDoctors] = useState([]);
+  const [doctorSchedules, setDoctorSchedules] = useState({});
+  const [selectedDoctorDates, setSelectedDoctorDates] = useState({});
   const [appointmentData, setAppointmentData] = useState({
     doctorId: '',
     date: '',
@@ -91,7 +134,17 @@ export default function PatientDashboard() {
     fetchAppointments();
     fetchCareTeam();
     fetchPrescriptions();
+    // These loaders are intentionally run once when the dashboard mounts.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  useEffect(() => {
+    doctors.forEach((doctor) => {
+      fetchDoctorWeek(doctor._id).catch((error) => {
+        console.error('Error fetching doctor weekly schedule:', error);
+      });
+    });
+  }, [doctors]);
 
   const fetchPatientProfile = async () => {
     try {
@@ -141,7 +194,10 @@ export default function PatientDashboard() {
   };
 
   const fetchAvailableSlots = async (doctorId, date) => {
-    if (!doctorId || !date) return;
+    if (!doctorId || !date) {
+      setAvailableSlots([]);
+      return;
+    }
     try {
       const token = localStorage.getItem('token');
       const response = await fetch(`${process.env.REACT_APP_API_URL}/api/patient/available-slots?doctorId=${doctorId}&date=${date}`, {
@@ -160,6 +216,29 @@ export default function PatientDashboard() {
     }
   };
 
+  const fetchDoctorSchedule = async (doctorId, date) => {
+    if (!doctorId || !date) return;
+    try {
+      const response = await fetch(`${process.env.REACT_APP_API_URL}/api/doctor/${doctorId}/schedule?date=${date}`);
+      if (!response.ok) throw new Error('Failed to fetch doctor schedule');
+      const data = await response.json();
+      setDoctorSchedules(prev => ({ ...prev, [`${doctorId}:${date}`]: data.slots }));
+    } catch (error) {
+      console.error('Error fetching doctor schedule:', error);
+    }
+  };
+
+  const fetchDoctorWeek = async (doctorId) => {
+    const schedules = await Promise.all(getWeekDates().map(async (date) => {
+      const response = await fetch(`${process.env.REACT_APP_API_URL}/api/doctor/${doctorId}/schedule?date=${date}`);
+      if (!response.ok) throw new Error('Failed to fetch doctor weekly schedule');
+      const data = await response.json();
+      return [`${doctorId}:${date}`, data.slots];
+    }));
+    setDoctorSchedules((current) => ({ ...current, ...Object.fromEntries(schedules) }));
+    setSelectedDoctorDates((current) => ({ ...current, [doctorId]: current[doctorId] || getWeekDates()[0] }));
+  };
+
   const fetchAppointments = async () => {
     try {
       const token = localStorage.getItem('token');
@@ -174,13 +253,35 @@ export default function PatientDashboard() {
       });
       if (response.ok) {
         const data = await response.json();
-        console.log('Fetched appointments:', data); // Add this line for debugging
         setAppointments(data);
       } else {
         console.error('Failed to fetch appointments');
       }
     } catch (error) {
       console.error('Error fetching appointments:', error);
+    }
+  };
+
+  /* legacy cancellation handler retained for API compatibility */
+  // Retained for compatibility with the cancellation API.
+  // eslint-disable-next-line no-unused-vars
+  const cancelAppointment = async (appointmentId) => {
+    if (!window.confirm('Batalkan appointment ini?')) return;
+    try {
+      const response = await fetch(`${process.env.REACT_APP_API_URL}/api/patient/appointments/${appointmentId}`, {
+        method: 'DELETE',
+        headers: {
+          'Authorization': `Bearer ${localStorage.getItem('token')}`
+        }
+      });
+      if (!response.ok) {
+        const data = await response.json();
+        throw new Error(data.error || 'Appointment gagal dibatalkan');
+      }
+      setAppointments((current) => current.filter((appointment) => appointment._id !== appointmentId));
+    } catch (error) {
+      console.error('Error cancelling appointment:', error);
+      alert(error.message);
     }
   };
 
@@ -235,7 +336,7 @@ export default function PatientDashboard() {
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         <Card>
           <CardHeader icon={Calendar}>
-            <CardTitle className="text-sm font-medium">Today's Appointments</CardTitle>
+            <CardTitle className="text-sm font-medium">Active Appointments</CardTitle>
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">
@@ -257,7 +358,7 @@ export default function PatientDashboard() {
               className="w-full text-sm text-gray-500 hover:text-gray-900 transition-colors"
               onClick={() => setShowAppointments(!showAppointments)}
             >
-              {showAppointments ? "Hide" : "View"} Today's Appointments
+              {showAppointments ? "Hide" : "View"} Active Appointments
               <ChevronDown className={`h-4 w-4 ml-2 transition-transform ${showAppointments ? "rotate-180" : ""}`} />
             </Button>
           </CardFooter>
@@ -274,12 +375,14 @@ export default function PatientDashboard() {
                         {appointment.reason}
                       </p>
                     </div>
-                    <p className="text-sm">{appointment.time}</p>
+                    <p className="text-sm">
+                      {new Date(appointment.date).toLocaleDateString()} at {appointment.time}
+                    </p>
                   </div>
                 ))
               ) : (
                 <p className="text-sm text-gray-500 text-center py-4">
-                  No appointments scheduled for today
+                  No active appointments
                 </p>
               )}
             </div>
@@ -329,15 +432,15 @@ export default function PatientDashboard() {
             <ul className="space-y-2">
               <li className="flex items-center space-x-2">
                 <Clock className="h-4 w-4 text-blue-600" />
-                <span>Blood test results collected</span>
+                <span>{appointments.length} active appointment(s)</span>
               </li>
               <li className="flex items-center space-x-2">
                 <User className="h-4 w-4 text-blue-600" />
-                <span>Appointment with Dr. Johnson completed</span>
+                <span>{careTeam.length} doctor(s) in your care team</span>
               </li>
               <li className="flex items-center space-x-2">
                 <FileText className="h-4 w-4 text-blue-600" />
-                <span>New prescription added</span>
+                <span>{prescriptions.length} active prescription(s)</span>
               </li>
             </ul>
           </CardContent>
@@ -453,7 +556,16 @@ export default function PatientDashboard() {
       setAppointmentData(prev => ({ ...prev, [name]: value }));
 
       if (name === 'date' || name === 'doctorId') {
-        fetchAvailableSlots(appointmentData.doctorId, value);
+        const doctorId = name === 'doctorId' ? value : appointmentData.doctorId;
+        const date = name === 'date' ? value : appointmentData.date;
+        if (name === 'doctorId') {
+          setAvailableSlots([]);
+          setAppointmentData((current) => ({ ...current, date: '', time: '' }));
+          fetchDoctorWeek(value).catch((error) => {
+            console.error('Error fetching selected doctor schedule:', error);
+          });
+        }
+        fetchAvailableSlots(doctorId, date);
       }
     };
 
@@ -470,7 +582,7 @@ export default function PatientDashboard() {
           body: JSON.stringify(appointmentData)
         });
         if (response.ok) {
-          const result = await response.json();
+          await response.json();
           alert('Appointment booked successfully');
           setAppointmentData({
             doctorId: '',
@@ -508,7 +620,27 @@ export default function PatientDashboard() {
             </div>
             <div className="space-y-2">
               <Label htmlFor="date">Appointment Date</Label>
-              <Input id="date" name="date" type="date" value={appointmentData.date} onChange={handleInputChange}/>
+              <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-7 gap-2 mt-1">
+                {getWeekDates().map((date) => {
+                  const slots = doctorSchedules[`${appointmentData.doctorId}:${date}`] || [];
+                  return (
+                    <button
+                      type="button"
+                      key={date}
+                      disabled={!appointmentData.doctorId}
+                      onClick={() => {
+                        setAppointmentData((current) => ({ ...current, date, time: '' }));
+                        fetchAvailableSlots(appointmentData.doctorId, date);
+                      }}
+                      className={`p-2 rounded-md text-xs font-medium ${
+                        slots.length ? 'bg-green-500 text-white' : 'bg-gray-300 text-gray-700'
+                      } ${appointmentData.date === date ? 'ring-2 ring-blue-700' : ''}`}
+                    >
+                      {formatDay(date)}
+                    </button>
+                  );
+                })}
+              </div>
             </div>
             <div className="space-y-2">
               <Label htmlFor="time">Preferred Time</Label>
@@ -530,12 +662,70 @@ export default function PatientDashboard() {
     );
   };
 
+  const renderDoctors = () => (
+    <Card className="w-full">
+      <CardHeader icon={Users}>
+        <CardTitle>Doctors</CardTitle>
+      </CardHeader>
+      <CardContent>
+        {doctors.length === 0 ? (
+          <p className="text-gray-600">Belum ada data dokter.</p>
+        ) : (
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            {doctors.map((doctor) => (
+              <div key={doctor._id} className="border rounded-lg p-5">
+                <h3 className="text-xl font-semibold text-gray-900">
+                  Dr. {doctor.firstName} {doctor.lastName}
+                </h3>
+                <p className="text-blue-600 font-medium mb-4">{doctor.specialty}</p>
+                <div className="text-sm text-gray-600 space-y-2">
+                  <p><strong>License:</strong> {doctor.licenseNumber}</p>
+                  <p><strong>Phone:</strong> {doctor.phoneNumber}</p>
+                  <p><strong>Email:</strong> {doctor.email}</p>
+                </div>
+                <label className="block text-sm font-medium text-gray-700 mt-4">
+                  Lihat jadwal dokter
+                  <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-7 gap-2 mt-2">
+                    {getWeekDates().map((date) => {
+                      const slots = doctorSchedules[`${doctor._id}:${date}`] || [];
+                      return (
+                        <button
+                          type="button"
+                          key={date}
+                          onClick={() => {
+                            setSelectedDoctorDates((current) => ({ ...current, [doctor._id]: date }));
+                            fetchDoctorSchedule(doctor._id, date);
+                          }}
+                          className={`p-2 rounded-md text-xs font-medium ${
+                            slots.length ? 'bg-green-500 text-white' : 'bg-gray-300 text-gray-700'
+                          } ${selectedDoctorDates[doctor._id] === date ? 'ring-2 ring-blue-700' : ''}`}
+                        >
+                          {formatDay(date)}
+                        </button>
+                      );
+                    })}
+                  </div>
+                </label>
+                <p className="text-sm text-gray-600 mt-3">
+                  <strong>Slot tersedia:</strong>{' '}
+                  {doctorSchedules[`${doctor._id}:${selectedDoctorDates[doctor._id]}`]?.length
+                    ? groupSlots(doctorSchedules[`${doctor._id}:${selectedDoctorDates[doctor._id]}`]).join(', ')
+                    : 'Tidak ada jadwal pada tanggal tersebut'}
+                </p>
+              </div>
+            ))}
+          </div>
+        )}
+      </CardContent>
+    </Card>
+  );
+
   return (
     <div className="min-h-screen bg-blue-600">
       <header className="bg-white p-4 flex justify-between items-center">
         <div className="flex items-center space-x-2">
           <Hospital className="h-6 w-6 text-blue-600" />
-          <span className="font-bold text-xl">Hospital Management System</span>
+          <span className="font-bold text-xl">MediCore</span>
         </div>
         <Button variant="outline" onClick={() => navigate('/')}>Sign Out</Button>
       </header>
@@ -549,6 +739,16 @@ export default function PatientDashboard() {
             >
               <Home className="w-4 h-4 mr-2" />
               Dashboard
+            </Button>
+          </li>
+          <li>
+            <Button
+              variant={activeTab === 'Doctors' ? "outline" : "ghost"}
+              className={`hover:bg-white hover:text-blue-600 ${activeTab === 'Doctors' ? 'bg-white text-blue-600' : 'text-white'}`}
+              onClick={() => setActiveTab('Doctors')}
+            >
+              <Users className="w-4 h-4 mr-2" />
+              Doctors
             </Button>
           </li>
           <li>
@@ -579,6 +779,7 @@ export default function PatientDashboard() {
         {activeTab === 'Dashboard' && renderDashboard()}
         {activeTab === 'Profile' && renderProfile()}
         {activeTab === 'Appointment Booking' && renderAppointmentBooking()}
+        {activeTab === 'Doctors' && renderDoctors()}
       </main>
     </div>
   );

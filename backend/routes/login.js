@@ -1,7 +1,7 @@
 const express = require('express');
 const User = require('../models/User');
 const Doctor = require('../models/Doctor');
-const Admin = require('../models/Admin'); // Add this line
+const Admin = require('../models/Admin');
 const bcrypt = require('bcrypt');
 const jwt = require('jsonwebtoken');
 
@@ -9,8 +9,6 @@ const router = express.Router();
 
 router.post('/', async (req, res) => {
   const { email, password, role } = req.body;
-
-  console.log('Received data:', req.body);
 
   try {
     let user;

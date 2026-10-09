@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Calendar, Clock, FileText, User, Users, ChevronDown, Home, UserCircle, Calendar as CalendarIcon, Eye, EyeOff, Hospital, Stethoscope, Activity, DollarSign, UserPlus, ShieldCheck } from 'lucide-react';
+import { Calendar, FileText, Users, ChevronDown, Home, UserCircle, Eye, EyeOff, Hospital, Stethoscope, Activity, DollarSign, UserPlus, ShieldCheck } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 
 const Button = ({ children, variant = 'primary', className = '', ...props }) => (
@@ -66,7 +66,6 @@ const Select = ({ children, ...props }) => (
 
 export default function AdminDashboard() {
   const [showDoctors, setShowDoctors] = useState(false);
-  const [showPatients, setShowPatients] = useState(false);
   const [activeTab, setActiveTab] = useState('Dashboard');
   const [isEditing, setIsEditing] = useState(false);
   const [adminInfo, setAdminInfo] = useState(null);
@@ -89,16 +88,15 @@ export default function AdminDashboard() {
   });
   const [showDoctorPassword, setShowDoctorPassword] = useState(false);
   const [showAdminPassword, setShowAdminPassword] = useState(false);
-  const [totalDoctors, setTotalDoctors] = useState(0);
+  const [healthcareStaffCount, setTotalDoctors] = useState(20);
   const [totalPatients, setTotalPatients] = useState(0);
   const [doctorOverview, setDoctorOverview] = useState([]);
   const [patientOverview, setPatientOverview] = useState([]);
-  const [hospitalCapacity] = useState(10000);
+  const [hospitalCapacity] = useState(100);
   const navigate = useNavigate();
 
   useEffect(() => {
     fetchAdminProfile();
-    fetchTotalDoctors();
     fetchTotalPatients();
     fetchDoctorOverview();
     fetchPatientOverview();
@@ -129,6 +127,8 @@ export default function AdminDashboard() {
     }
   };
 
+  // Kept for optional doctor-count reporting.
+  // eslint-disable-next-line no-unused-vars
   const fetchTotalDoctors = async () => {
     try {
       const token = localStorage.getItem('token');
@@ -201,7 +201,7 @@ export default function AdminDashboard() {
       if (!token) {
         return;
       }
-      const response = await fetch(`${process.env.REACT_APP_API_URL}/api/admin/patient-doctors`, {
+      const response = await fetch(`${process.env.REACT_APP_API_URL}/api/admin/patient-overview`, {
         headers: {
           'Authorization': `Bearer ${token}`
         }
@@ -218,17 +218,17 @@ export default function AdminDashboard() {
   };
 
   const renderDashboard = () => {
-    const occupancyRate = ((totalPatients / hospitalCapacity) * 100).toFixed(2);
+    const occupancyRate = Math.min((totalPatients / hospitalCapacity) * 100, 100).toFixed(2);
     return (
       <>
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
           <Card>
             <CardHeader icon={Stethoscope}>
-              <CardTitle className="text-sm font-medium">Total Doctors</CardTitle>
+              <CardTitle className="text-sm font-medium">Healthcare Staff</CardTitle>
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">{totalDoctors}</div>
-              <p className="text-xs text-gray-500">Active medical staff</p>
+              <div className="text-2xl font-bold">{healthcareStaffCount}</div>
+              <p className="text-xs text-gray-500">Doctors, nurses, and other staff</p>
             </CardContent>
           </Card>
           <Card>
@@ -237,7 +237,7 @@ export default function AdminDashboard() {
             </CardHeader>
             <CardContent>
               <div className="text-2xl font-bold">{totalPatients}</div>
-              <p className="text-xs text-gray-500">Currently admitted</p>
+              <p className="text-xs text-gray-500">Currently admitted patients</p>
             </CardContent>
           </Card>
           <Card>
@@ -246,7 +246,7 @@ export default function AdminDashboard() {
             </CardHeader>
             <CardContent>
               <div className="text-2xl font-bold">{occupancyRate}%</div>
-              <p className="text-xs text-gray-500">Bed occupancy rate</p>
+              <p className="text-xs text-gray-500">Occupied beds ({totalPatients}/{hospitalCapacity})</p>
             </CardContent>
           </Card>
         </div>
@@ -291,28 +291,11 @@ export default function AdminDashboard() {
               <div className="text-2xl font-bold">{patientOverview.length}</div>
               <p className="text-xs text-gray-500">Total admitted patients</p>
             </CardContent>
-            <CardFooter className="p-2">
-              <Button 
-                variant="ghost" 
-                className="w-full text-sm text-gray-500 hover:text-gray-900 transition-colors"
-                onClick={() => setShowPatients(!showPatients)}
-              >
-                {showPatients ? "Hide" : "View All"} Patients
-                <ChevronDown className={`h-4 w-4 ml-2 transition-transform ${showPatients ? "rotate-180" : ""}`} />
-              </Button>
-            </CardFooter>
-            {showPatients && (
-              <div className="px-4 pb-4">
-                {patientOverview.map((patient, index) => (
-                  <div key={index} className="py-2 border-t">
-                    <p className="text-sm font-medium">{patient.name}</p>
-                    <p className="text-xs text-gray-500">
-                      Total Appointments: {patient.appointments}
-                    </p>
-                  </div>
-                ))}
-              </div>
-            )}
+            <CardContent>
+              <p className="text-sm text-gray-600">
+                {patientOverview.length} patient(s) currently admitted.
+              </p>
+            </CardContent>
           </Card>
         </div>
         <div className="mt-8 grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -324,15 +307,15 @@ export default function AdminDashboard() {
               <ul className="space-y-2">
                 <li className="flex items-center space-x-2">
                   <UserPlus className="h-4 w-4 text-blue-600" />
-                  <span>New doctor onboarded: Dr. Emily Taylor</span>
+                  <span>Doctor accounts and healthcare staff records are available</span>
                 </li>
                 <li className="flex items-center space-x-2">
                   <Activity className="h-4 w-4 text-blue-600" />
-                  <span>Emergency ward capacity increased by 10 beds</span>
+                  <span>Hospital occupancy is calculated from currently admitted patients</span>
                 </li>
                 <li className="flex items-center space-x-2">
                   <DollarSign className="h-4 w-4 text-blue-600" />
-                  <span>Monthly budget report generated</span>
+                  <span>Appointment and admission data are synchronized with the system</span>
                 </li>
               </ul>
             </CardContent>
@@ -345,15 +328,15 @@ export default function AdminDashboard() {
               <ul className="space-y-2">
                 <li className="flex items-center space-x-2">
                   <Calendar className="h-4 w-4 text-blue-600" />
-                  <span>Staff performance review - Next week</span>
+                  <span>Review doctor schedules and appointment availability</span>
                 </li>
                 <li className="flex items-center space-x-2">
                   <FileText className="h-4 w-4 text-blue-600" />
-                  <span>Update hospital policies - Due in 3 days</span>
+                  <span>Update patient admission status after discharge</span>
                 </li>
                 <li className="flex items-center space-x-2">
                   <Users className="h-4 w-4 text-blue-600" />
-                  <span>Department heads meeting - Tomorrow, 10:00 AM</span>
+                  <span>Monitor admitted patients and doctor workloads</span>
                 </li>
               </ul>
             </CardContent>
@@ -702,7 +685,7 @@ export default function AdminDashboard() {
       <header className="bg-white p-4 flex justify-between items-center">
         <div className="flex items-center space-x-2">
           <Hospital className="h-6 w-6 text-blue-600" />
-          <span className="font-bold text-xl">Hospital Management System</span>
+          <span className="font-bold text-xl">MediCore</span>
         </div>
         <Button variant="outline" onClick={() => navigate('/')}>Sign Out</Button>
       </header>

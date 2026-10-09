@@ -55,7 +55,6 @@ const SignUp = () => {
           navigate('/login');
         } else {
           const errorData = await response.json();
-          console.log('Error data:', errorData); // Add this line to log the error data
           setErrors({ ...errors, submit: errorData.error });
         }
       } catch (error) {

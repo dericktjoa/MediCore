@@ -1,183 +1,178 @@
-<h1>🏥 Hospital Management System + 🧠 MediBot (AI Symptom Checker Chatbot)</h1>
+<h1>MediCore Hospital Management System</h1>
 
-<p>An integrated full-stack Hospital Management System built with the <strong>MERN stack (MongoDB, Express, React, Node.js)</strong>, enhanced by <strong>MediBot</strong>, an AI-powered chatbot that assists patients by checking symptoms and suggesting nearby hospitals.</p>
+<p>MediCore adalah aplikasi manajemen rumah sakit berbasis MERN yang menyediakan
+autentikasi admin, dokter, dan pasien; pengaturan jadwal dokter; appointment;
+prescription; serta dashboard administrasi.</p>
 
-<hr />
-
-<h2>🚀 Overview</h2>
-
-<p>This web application streamlines hospital operations, including managing users (admins, doctors, patients), appointments, and medical records. It includes a smart chatbot, <strong>MediBot</strong>, that uses a PyTorch-trained model to provide preliminary symptom analysis and offline hospital recommendations based on location.</p>
-
-<p>All components are combined into a single repository with three main folders:</p>
+<h2>Struktur Project</h2>
 
 <ul>
-  <li><code>backend</code> – Node.js + Express API</li>
-  <li><code>frontend</code> – React-based UI</li>
-  <li><code>chatbot</code> – Flask app with PyTorch model</li>
+  <li><code>backend</code> - API Node.js dan Express.</li>
+  <li><code>frontend</code> - aplikasi React.</li>
+  <li>MongoDB - database lokal yang diakses melalui backend.</li>
 </ul>
 
-<hr />
+<h2>Prasyarat</h2>
 
-<h2>🔗 Live Demo</h2>
+Install aplikasi berikut sebelum menjalankan project:
 
 <ul>
-  <li>🌐 <a href="https://hospital-management-system-six-pi.vercel.app/" target="_blank" rel="noopener noreferrer">Frontend (Vercel)</a></li>
-  <li>🖥️ <a href="https://hospital-management-system-1dqr.onrender.com" target="_blank" rel="noopener noreferrer">Backend API (Render)</a></li>
-  <li>🤖 <a href="https://hospital-management-system-chatbot.onrender.com" target="_blank" rel="noopener noreferrer">MediBot Chatbot (Render)</a></li>
+  <li>Node.js LTS dan npm.</li>
+  <li>MongoDB Community Server untuk Windows.</li>
+  <li>Git, jika repository diambil menggunakan Git.</li>
+  <li>MongoDB Compass (opsional) untuk melihat isi database.</li>
 </ul>
 
-<hr />
+<p>Frontend tidak terhubung langsung ke MongoDB. Alurnya adalah:</p>
 
-<h2>✨ Features</h2>
+<pre><code>Browser → Frontend React → Backend Express → MongoDB</code></pre>
 
-<h3>🏥 Hospital Management System</h3>
-<ul>
-  <li>🔐 User authentication & authorization (Patients, Doctors, Admins)</li>
-  <li>📅 Appointment scheduling & patient record management</li>
-  <li>👨‍⚕️ Doctor dashboard with profile & availability</li>
-  <li>📊 Admin dashboard to manage users & hospital data</li>
-  <li>💻 Responsive UI for mobile and desktop</li>
-</ul>
+<p>Untuk instalasi lokal, gunakan <code>mongod</code> sebagai server MongoDB.
+<code>mongosh</code> hanya diperlukan jika ingin mengakses database melalui
+terminal. <code>mongos</code> tidak diperlukan.</p>
 
-<h3>🤖 MediBot – AI Symptom Checker Chatbot</h3>
-<ul>
-  <li>🧠 Intent classification using a PyTorch model</li>
-  <li>💬 Flask-powered chat interface embedded in the app</li>
-  <li>📍 Offline hospital lookup by area (e.g., “Kilpauk”, “Adyar”)</li>
-  <li>🧪 Terminal test version for debugging</li>
-  <li>📁 Static dataset (no external API calls required)</li>
-</ul>
+<h2>Menjalankan Project dari Repository</h2>
 
-<hr />
+<h3>1. Download atau clone repository</h3>
 
-<h2>🛠️ Technologies Used</h2>
-
-<h3>Frontend</h3>
-<ul>
-  <li>React</li>
-  <li>React Router</li>
-  <li>Tailwind CSS</li>
-  <li>Lucide Icons</li>
-  <li>Axios</li>
-</ul>
-
-<h3>Backend</h3>
-<ul>
-  <li>Node.js</li>
-  <li>Express.js</li>
-  <li>MongoDB & Mongoose</li>
-  <li>JWT (JSON Web Token) for auth</li>
-  <li>dotenv for environment config</li>
-</ul>
-
-<h3>Chatbot</h3>
-<ul>
-  <li>Python</li>
-  <li>Flask</li>
-  <li>PyTorch</li>
-  <li>scikit-learn</li>
-  <li>Jinja2</li>
-</ul>
-
-<hr />
-
-<h2>⚙️ Getting Started (For Local Development)</h2>
-
-<h3>📦 Prerequisites</h3>
-<ul>
-  <li>Node.js v14+</li>
-  <li>Python 3.7+</li>
-  <li>MongoDB (local or cloud)</li>
-</ul>
-
-<hr />
-
-<h2>📁 Installation & Setup</h2>
-
-<h3>1. Clone the Repository</h3>
+<p>Dengan Git:</p>
 
 <pre><code>git clone https://github.com/KshithijSinghania/Hospital-Management-System.git
-cd Hospital-Management-System
-</code></pre>
+cd Hospital-Management-System</code></pre>
 
-<h3>2. Setup Backend (Node.js/Express)</h3>
+<p>Jika menggunakan file ZIP, ekstrak file tersebut lalu buka terminal di folder
+utama project.</p>
+
+<h3>2. Jalankan MongoDB lokal</h3>
+
+<p>Setelah MongoDB Community Server terinstall, buka PowerShell sebagai
+Administrator:</p>
+
+<pre><code>Get-Service MongoDB
+Start-Service MongoDB
+Test-NetConnection 127.0.0.1 -Port 27017</code></pre>
+
+<p>Nilai <code>TcpTestSucceeded</code> harus <code>True</code>. Jika service
+MongoDB sudah berstatus <code>Running</code>, perintah
+<code>Start-Service MongoDB</code> tidak perlu dijalankan lagi.</p>
+
+<h3>3. Siapkan dan jalankan backend</h3>
+
+<p>Buka terminal pertama dari folder utama project:</p>
 
 <pre><code>cd backend
-npm install
-</code></pre>
+npm install</code></pre>
 
-<p>Create a <code>.env</code> file in <code>backend</code>:</p>
+<p>Buat file <code>backend/.env</code>. File ini tidak disertakan di repository
+karena berisi konfigurasi lokal.</p>
 
-<pre><code>MONGO_URI=mongodb://0.0.0.0/Hospital-Management-System-MERN
-PORT=8080
-</code></pre>
+<pre><code>MONGO_URI=mongodb://127.0.0.1:27017/medicore
+PORT=5000</code></pre>
 
-<p>Optionally, create the first admin by editing <code>createAdmin.js</code>:</p>
+<p>Tambahkan data awal admin dan dokter pada database lokal:</p>
 
-<pre><code>const admin = new Admin({
-  firstName: "abc",
-  lastName: "xyz",
-  email: "abc@gmail.com",
-  password: "xyz123",
-  role: "admin"
-});
-</code></pre>
+<pre><code>npm run data</code></pre>
 
-<pre><code>node createAdmin.js
-node server.js
-</code></pre>
+<p>Perintah tersebut menjalankan <code>createAdmin.js</code> dan
+<code>createDoctors.js</code>. Gunakan perintah ini pada database baru. Jika
+admin sudah pernah dibuat, perintah dapat berhenti karena email admin duplikat.
+Dalam kondisi tersebut, buat dokter dengan:</p>
 
-<h3>3. Setup Frontend (React)</h3>
+<pre><code>node createDoctors.js</code></pre>
 
-<pre><code>cd ../frontend
-npm install
-</code></pre>
-
-<p>Create a <code>.env</code> file in <code>frontend</code>:</p>
-
-<pre><code>REACT_APP_API_URL=https://your-backend-api.onrender.com
-REACT_APP_CHATBOT_URL=https://your-chatbot-api.onrender.com
-</code></pre>
+<p>Jalankan backend dan biarkan terminal ini tetap terbuka:</p>
 
 <pre><code>npm start</code></pre>
 
-<p>Visit: <a href="http://localhost:3000" target="_blank" rel="noopener noreferrer">http://localhost:3000</a></p>
+<p>Backend tersedia di
+<a href="http://localhost:5000" target="_blank" rel="noopener noreferrer">
+http://localhost:5000</a>.</p>
 
-<h3>4. Setup MediBot Chatbot (Flask)</h3>
+<h3>4. Siapkan dan jalankan frontend</h3>
 
-<pre><code>cd ../chatbot
-pip install -r requirements.txt
-</code></pre>
+<p>Buka terminal kedua dari folder utama project:</p>
 
-<p>(Optional) To retrain the model:</p>
+<pre><code>cd frontend
+npm install</code></pre>
 
-<pre><code>python model/train.py
-</code></pre>
+<p>Buat file <code>frontend/.env</code>:</p>
 
-<pre><code>python app.py
-</code></pre>
+<pre><code>REACT_APP_API_URL=http://localhost:5000</code></pre>
 
-<p>Visit: <a href="http://127.0.0.1:5000" target="_blank" rel="noopener noreferrer">http://127.0.0.1:5000</a></p>
+<p>Jalankan frontend:</p>
 
-<hr />
+<pre><code>npm start</code></pre>
 
-<h2>🧪 Chatbot Test CLI (Optional)</h2>
+<p>Browser biasanya terbuka otomatis. Jika tidak, buka:
+<a href="http://localhost:3000" target="_blank" rel="noopener noreferrer">
+http://localhost:3000</a>.</p>
 
-<pre><code>python test_chat.py</code></pre>
+<h2>Urutan Singkat Setelah Instalasi</h2>
 
-<hr />
+<p>Pastikan MongoDB berjalan, kemudian gunakan dua terminal:</p>
 
-<h2>🧑‍💻 Contributing</h2>
+<pre><code>Terminal 1
+cd backend
+npm install
+npm run data
+npm start</code></pre>
 
-<p>Contributions are welcome! Feel free to:</p>
+<pre><code>Terminal 2
+cd frontend
+npm install
+npm start</code></pre>
+
+<p>Untuk penggunaan berikutnya, <code>npm install</code> dan
+<code>npm run data</code> tidak perlu diulang kecuali dependency atau database
+belum disiapkan.</p>
+
+<h2>Akun Awal</h2>
+
+<p><code>npm run data</code> membuat akun dokter dari
+<code>backend/createDoctors.js</code>. Password default dokter yang digunakan
+script tersebut adalah <code>Doctor123!</code>. Segera ubah password pada
+lingkungan nyata dan jangan membagikan kredensial default.</p>
+
+<p>Akun admin dibuat oleh <code>backend/createAdmin.js</code>. Periksa file
+tersebut sebelum menjalankan script dan ubah data admin sesuai kebutuhan lokal.</p>
+
+<h2>Akses Database Lokal</h2>
+
+<p>Nama database yang digunakan adalah <code>medicore</code>. Jika
+<code>mongosh</code> tersedia:</p>
+
+<pre><code>mongosh "mongodb://127.0.0.1:27017/medicore"
+show collections
+exit</code></pre>
+
+<p>Untuk MongoDB Compass, gunakan connection string:</p>
+
+<pre><code>mongodb://127.0.0.1:27017</code></pre>
+
+<h2>Troubleshooting</h2>
+
 <ul>
-  <li>Submit a pull request 🛠️</li>
-  <li>Open issues for bugs/suggestions 🐛</li>
-  <li>Improve model training or expand the dataset 📊</li>
+  <li><code>ECONNREFUSED 127.0.0.1:27017</code>: jalankan service
+  <code>MongoDB</code> dan pastikan port <code>27017</code> terbuka.</li>
+  <li>Frontend tidak dapat mengakses API: pastikan backend berjalan di port
+  <code>5000</code> dan <code>frontend/.env</code> berisi
+  <code>http://localhost:5000</code>.</li>
+  <li>Port <code>5000</code> atau <code>3000</code> sedang digunakan: hentikan
+  aplikasi lain atau ubah konfigurasi port yang sesuai.</li>
+  <li>Data MongoDB Atlas tidak otomatis tersalin ke database lokal. Lakukan
+  export/import secara terpisah jika data lama diperlukan.</li>
 </ul>
 
-<hr />
+<h2>Keamanan Repository</h2>
 
-<h2>📄 License</h2>
+<p>File <code>.env</code>, dependency, hasil build, log, dan file database lokal
+diabaikan oleh Git melalui <code>.gitignore</code>. Jangan commit password,
+JWT secret, atau connection string database yang berisi kredensial.</p>
 
-<p>This project is open source and available under the <a href="LICENSE" target="_blank" rel="noopener noreferrer">MIT License</a>.</p>
+<h2>Teknologi</h2>
+
+<ul>
+  <li>React, React Router, Tailwind CSS, dan Lucide React.</li>
+  <li>Node.js, Express, Mongoose, JWT, bcrypt, dan dotenv.</li>
+  <li>MongoDB Community Server.</li>
+</ul>
