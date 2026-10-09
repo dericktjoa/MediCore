@@ -30,7 +30,7 @@ Project ini menyediakan tiga container:
 | --- | --- | --- |
 | `medicore-app` | Frontend React hasil build dan backend Node.js + Express | `5000` |
 | `medicore-mongodb` | Database MongoDB | `27017` |
-| `medicore-os` | Ubuntu 22.04 untuk kebutuhan praktikum | - |
+| `medicore-os` | Ubuntu 22.04 | - |
 
 Container `os` berdiri sendiri untuk memenuhi kebutuhan praktikum. Container
 tersebut bukan host untuk container aplikasi atau database. Setiap container
