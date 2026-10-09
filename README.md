@@ -37,8 +37,8 @@ terminal. <code>mongos</code> tidak diperlukan.</p>
 
 <p>Dengan Git:</p>
 
-<pre><code>git clone https://github.com/KshithijSinghania/Hospital-Management-System.git
-cd Hospital-Management-System</code></pre>
+<pre><code>git clone https://github.com/dericktjoa/Uncontainered_MediCore.git
+</code></pre>
 
 <p>Jika menggunakan file ZIP, ekstrak file tersebut lalu buka terminal di folder
 utama project.</p>
