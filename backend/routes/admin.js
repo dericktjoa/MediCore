@@ -5,6 +5,7 @@ const jwt = require('jsonwebtoken');
 const bcrypt = require('bcrypt');
 const User = require('../models/User');
 const Appointment = require('../models/Appointment');
+const { jwtSecret } = require('../config/auth');
 
 const router = express.Router();
 const HEALTHCARE_STAFF_COUNT = 20;
@@ -25,7 +26,7 @@ const auth = (req, res, next) => {
   }
 
   try {
-    const decoded = jwt.verify(token, 'your_jwt_secret');
+    const decoded = jwt.verify(token, jwtSecret);
     req.user = decoded;
     next();
   } catch (error) {

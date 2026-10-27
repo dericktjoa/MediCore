@@ -114,6 +114,7 @@ export default function PatientDashboard() {
   const [patientInfo, setPatientInfo] = useState(null);
   const [editedInfo, setEditedInfo] = useState(null);
   const [doctors, setDoctors] = useState([]);
+  const [doctorSearch, setDoctorSearch] = useState('');
   const [doctorSchedules, setDoctorSchedules] = useState({});
   const [selectedDoctorDates, setSelectedDoctorDates] = useState({});
   const [appointmentData, setAppointmentData] = useState({
@@ -190,6 +191,32 @@ export default function PatientDashboard() {
       }
     } catch (error) {
       console.error('Error fetching doctors:', error);
+    }
+  };
+
+  const searchDoctors = async (event) => {
+    event.preventDefault();
+    try {
+      const token = localStorage.getItem('token');
+      if (!token) {
+        navigate('/login');
+        return;
+      }
+      const query = doctorSearch.trim();
+      const endpoint = query
+        ? `${process.env.REACT_APP_API_URL}/api/doctor/search?q=${encodeURIComponent(query)}`
+        : `${process.env.REACT_APP_API_URL}/api/doctor/all`;
+      const response = await fetch(endpoint, {
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
+      });
+      if (!response.ok) {
+        throw new Error('Failed to search doctors');
+      }
+      setDoctors(await response.json());
+    } catch (error) {
+      console.error('Error searching doctors:', error);
     }
   };
 
@@ -668,8 +695,18 @@ export default function PatientDashboard() {
         <CardTitle>Doctors</CardTitle>
       </CardHeader>
       <CardContent>
+        <form onSubmit={searchDoctors} className="flex flex-col sm:flex-row gap-2 mb-6">
+          <Input
+            id="doctor-search"
+            value={doctorSearch}
+            onChange={(event) => setDoctorSearch(event.target.value)}
+            placeholder="Search by doctor name or specialty"
+            aria-label="Search doctors"
+          />
+          <Button type="submit">Search</Button>
+        </form>
         {doctors.length === 0 ? (
-          <p className="text-gray-600">Belum ada data dokter.</p>
+          <p className="text-gray-600">Tidak ada dokter yang sesuai.</p>
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             {doctors.map((doctor) => (

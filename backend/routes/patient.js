@@ -5,6 +5,8 @@ const Appointment = require('../models/Appointment');
 const Doctor = require('../models/Doctor');
 const Prescription = require('../models/Prescription');
 const DoctorSchedule = require('../models/DoctorSchedule');
+const { jwtSecret } = require('../config/auth');
+const { normalizeAppointmentReason } = require('../utils/appointment');
 
 const router = express.Router();
 
@@ -24,7 +26,7 @@ const auth = (req, res, next) => {
   }
 
   try {
-    const decoded = jwt.verify(token, 'your_jwt_secret');
+    const decoded = jwt.verify(token, jwtSecret);
     req.user = decoded;
     next();
   } catch (error) {
@@ -81,7 +83,7 @@ router.post('/book-appointment', auth, async (req, res) => {
       doctorId,
       date,
       time,
-      reason
+      reason: normalizeAppointmentReason(reason)
     });
     await appointment.save();
     res.status(201).json({ message: 'Appointment booked successfully', appointment });
