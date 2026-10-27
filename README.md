@@ -138,7 +138,6 @@ docker compose exec app npm run data
 - Profile pasien yang menampilkan nama dan email.
 - Memperbarui data profile pasien.
 - Melihat daftar dokter dan slot jadwal yang tersedia.
-- Mencari dokter berdasarkan nama atau spesialisasi.
 - Membuat appointment dengan memilih dokter, tanggal, waktu, dan alasan
   kunjungan.
 - Melihat detail appointment dan resep dari dokter.

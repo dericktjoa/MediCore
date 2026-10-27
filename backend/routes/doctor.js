@@ -15,21 +15,6 @@ const TIME_SLOTS = [
   '10:00 PM', '11:00 PM'
 ];
 
-const buildDoctorSearchFilter = (query = '') => {
-  const search = query.trim();
-  if (!search) return {};
-
-  const escapedSearch = search.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-  const pattern = new RegExp(escapedSearch, 'i');
-  return {
-    $or: [
-      { firstName: pattern },
-      { lastName: pattern },
-      { specialty: pattern }
-    ]
-  };
-};
-
 const auth = (req, res, next) => {
   const token = req.header('Authorization')?.replace('Bearer ', '');
 
@@ -90,17 +75,6 @@ router.get('/all', async (req, res) => {
     res.json(doctors);
   } catch (error) {
     console.error(error);
-    res.status(500).send({ error: 'Server error' });
-  }
-});
-
-router.get('/search', async (req, res) => {
-  try {
-    const doctors = await Doctor.find(buildDoctorSearchFilter(req.query.q))
-      .select('firstName lastName specialty licenseNumber phoneNumber email');
-    res.json(doctors);
-  } catch (error) {
-    console.error('Error searching doctors:', error);
     res.status(500).send({ error: 'Server error' });
   }
 });
@@ -375,4 +349,3 @@ router.put('/patients/:id/discharge', auth, async (req, res) => {
 });
 
 module.exports = router;
-module.exports.buildDoctorSearchFilter = buildDoctorSearchFilter;
