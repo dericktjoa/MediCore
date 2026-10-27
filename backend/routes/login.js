@@ -4,6 +4,7 @@ const Doctor = require('../models/Doctor');
 const Admin = require('../models/Admin');
 const bcrypt = require('bcrypt');
 const jwt = require('jsonwebtoken');
+const { jwtSecret } = require('../config/auth');
 
 const router = express.Router();
 
@@ -29,7 +30,7 @@ router.post('/', async (req, res) => {
       return res.status(400).send({ error: 'Invalid password' });
     }
 
-    const token = jwt.sign({ id: user._id, role: user.role }, 'your_jwt_secret', { expiresIn: '24h' });
+    const token = jwt.sign({ id: user._id, role: user.role }, jwtSecret, { expiresIn: '24h' });
     res.send({ token, role: user.role });
   } catch (error) {
     res.status(500).send({ error: 'Server error' });

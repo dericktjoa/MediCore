@@ -5,6 +5,8 @@ const Appointment = require('../models/Appointment');
 const User = require('../models/User');
 const Prescription = require('../models/Prescription');
 const DoctorSchedule = require('../models/DoctorSchedule');
+const { jwtSecret } = require('../config/auth');
+const { normalizeAppointmentReason } = require('../utils/appointment');
 
 const router = express.Router();
 const TIME_SLOTS = [
@@ -12,6 +14,21 @@ const TIME_SLOTS = [
   '4:00 PM', '5:00 PM', '6:00 PM', '7:00 PM', '8:00 PM', '9:00 PM',
   '10:00 PM', '11:00 PM'
 ];
+
+const buildDoctorSearchFilter = (query = '') => {
+  const search = query.trim();
+  if (!search) return {};
+
+  const escapedSearch = search.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  const pattern = new RegExp(escapedSearch, 'i');
+  return {
+    $or: [
+      { firstName: pattern },
+      { lastName: pattern },
+      { specialty: pattern }
+    ]
+  };
+};
 
 const auth = (req, res, next) => {
   const token = req.header('Authorization')?.replace('Bearer ', '');
@@ -21,7 +38,7 @@ const auth = (req, res, next) => {
   }
 
   try {
-    const decoded = jwt.verify(token, 'your_jwt_secret');
+    const decoded = jwt.verify(token, jwtSecret);
     req.user = decoded;
     next();
   } catch (error) {
@@ -73,6 +90,17 @@ router.get('/all', async (req, res) => {
     res.json(doctors);
   } catch (error) {
     console.error(error);
+    res.status(500).send({ error: 'Server error' });
+  }
+});
+
+router.get('/search', async (req, res) => {
+  try {
+    const doctors = await Doctor.find(buildDoctorSearchFilter(req.query.q))
+      .select('firstName lastName specialty licenseNumber phoneNumber email');
+    res.json(doctors);
+  } catch (error) {
+    console.error('Error searching doctors:', error);
     res.status(500).send({ error: 'Server error' });
   }
 });
@@ -200,7 +228,7 @@ router.post('/schedule-appointment', auth, async (req, res) => {
       doctorId,
       date,
       time,
-      reason
+      reason: normalizeAppointmentReason(reason)
     });
 
     await appointment.save();
@@ -347,3 +375,4 @@ router.put('/patients/:id/discharge', auth, async (req, res) => {
 });
 
 module.exports = router;
+module.exports.buildDoctorSearchFilter = buildDoctorSearchFilter;
