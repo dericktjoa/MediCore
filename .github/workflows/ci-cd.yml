@@ -6,7 +6,7 @@ on:
   push:
     branches: [main]
     tags:
-      - 'v*.*.*'
+      - "v*.*.*"
 
 permissions:
   contents: read
@@ -91,6 +91,8 @@ jobs:
         uses: docker/metadata-action@v5
         with:
           images: ${{ secrets.DOCKERHUB_USERNAME }}/medicore
+          flavor: |
+            latest=false
           tags: |
             type=ref,event=branch,suffix=-${{ steps.date.outputs.value }}
             type=semver,pattern={{version}}
