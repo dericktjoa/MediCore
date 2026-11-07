@@ -1,7 +1,9 @@
 services:
   app:
-    image: ${DOCKERHUB_USERNAME:-plankboard}/medicore:${APP_VERSION:-latest}
+    image: ${DOCKERHUB_USERNAME:-plankboard}/medicore:${APP_VERSION:?APP_VERSION must be set}
     container_name: medicore-app
+    build:
+      context: .
     environment:
       MONGO_URI: mongodb://mongodb:27017/medicore
       PORT: 5000

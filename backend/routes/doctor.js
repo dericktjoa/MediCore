@@ -105,6 +105,7 @@ router.get('/search', async (req, res) => {
   }
 });
 
+
 router.get('/:id/schedule', async (req, res) => {
   try {
     const { date } = req.query;

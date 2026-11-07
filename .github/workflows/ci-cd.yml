@@ -8,31 +8,61 @@ on:
     tags:
       - 'v*.*.*'
 
+permissions:
+  contents: read
+
 jobs:
-  verify:
-    name: Verify application
+  validate-workflow:
+    name: Validate GitHub Actions workflow
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - name: Check out source code
+        uses: actions/checkout@v4
 
-      - uses: actions/setup-node@v4
+      - name: Run actionlint
+        uses: raven-actions/actionlint@v2
+
+  verify:
+    name: Verify application
+    needs: validate-workflow
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out source code
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
         with:
           node-version: 20
 
-      - name: Test frontend and build
+      - name: Install frontend dependencies
         working-directory: frontend
-        run: |
-          npm ci
-          npm test -- --watchAll=false
-          npm run build
+        run: npm ci
+
+      - name: Test frontend
+        working-directory: frontend
+        run: npm test -- --watchAll=false
+
+      - name: Build frontend
+        working-directory: frontend
+        run: npm run build
+
+      - name: Install backend dependencies
+        working-directory: backend
+        run: npm ci
 
       - name: Test backend
         working-directory: backend
         env:
           JWT_SECRET: ci-test-secret
-        run: |
-          npm ci
-          npm test
+        run: npm test
+
+      - name: Validate Docker Compose configuration
+        env:
+          DOCKERHUB_USERNAME: medicore-ci
+          APP_VERSION: ci
+          JWT_SECRET: ci-test-secret
+        run: docker compose config --quiet
 
       - name: Build Docker image
         run: docker build --tag medicore:ci .
@@ -43,12 +73,18 @@ jobs:
     needs: verify
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - name: Check out source code
+        uses: actions/checkout@v4
 
-      - uses: docker/login-action@v3
+      - name: Log in to Docker Hub
+        uses: docker/login-action@v3
         with:
           username: ${{ secrets.DOCKERHUB_USERNAME }}
           password: ${{ secrets.DOCKERHUB_TOKEN }}
+
+      - name: Set image date
+        id: date
+        run: echo "value=$(date -u +%Y%m%d)" >> "$GITHUB_OUTPUT"
 
       - name: Extract Docker metadata
         id: meta
@@ -56,11 +92,11 @@ jobs:
         with:
           images: ${{ secrets.DOCKERHUB_USERNAME }}/medicore
           tags: |
-            type=raw,value=latest,enable=${{ startsWith(github.ref, 'refs/heads/') }}
-            type=sha,prefix=sha-
+            type=ref,event=branch,suffix=-${{ steps.date.outputs.value }}
             type=semver,pattern={{version}}
 
-      - uses: docker/build-push-action@v6
+      - name: Build and push Docker image
+        uses: docker/build-push-action@v6
         with:
           context: .
           push: true

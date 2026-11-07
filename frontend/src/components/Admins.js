@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Calendar, FileText, Users, ChevronDown, Home, UserCircle, Eye, EyeOff, Hospital, Stethoscope, Activity, DollarSign, UserPlus, ShieldCheck } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 
+//a
 const Button = ({ children, variant = 'primary', className = '', ...props }) => (
   <button
     className={`inline-flex items-center justify-center px-4 py-2 text-sm font-medium rounded-md shadow-sm transition-colors focus:outline-none focus:ring-2 focus:ring-offset-2 ${
