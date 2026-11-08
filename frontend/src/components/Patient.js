@@ -114,7 +114,7 @@ export default function PatientDashboard() {
   const [patientInfo, setPatientInfo] = useState(null);
   const [editedInfo, setEditedInfo] = useState(null);
   const [doctors, setDoctors] = useState([]);
-  const [doctorSearch, setDoctorSearch] = useState('');
+  // const [doctorSearch, setDoctorSearch] = useState('');
   const [doctorSchedules, setDoctorSchedules] = useState({});
   const [selectedDoctorDates, setSelectedDoctorDates] = useState({});
   const [appointmentData, setAppointmentData] = useState({
@@ -194,6 +194,7 @@ export default function PatientDashboard() {
     }
   };
 
+  /*
   const searchDoctors = async (event) => {
     event.preventDefault();
     try {
@@ -219,6 +220,7 @@ export default function PatientDashboard() {
       console.error('Error searching doctors:', error);
     }
   };
+  */
 
   const fetchAvailableSlots = async (doctorId, date) => {
     if (!doctorId || !date) {
@@ -695,16 +697,7 @@ export default function PatientDashboard() {
         <CardTitle>Doctors</CardTitle>
       </CardHeader>
       <CardContent>
-        <form onSubmit={searchDoctors} className="flex flex-col sm:flex-row gap-2 mb-6">
-          <Input
-            id="doctor-search"
-            value={doctorSearch}
-            onChange={(event) => setDoctorSearch(event.target.value)}
-            placeholder="Search by doctor name or specialty"
-            aria-label="Search doctors"
-          />
-          <Button type="submit">Search</Button>
-        </form>
+        {/* Doctor search is temporarily disabled. */}
         {doctors.length === 0 ? (
           <p className="text-gray-600">Tidak ada dokter yang sesuai.</p>
         ) : (
