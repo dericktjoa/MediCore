@@ -697,7 +697,17 @@ export default function PatientDashboard() {
         <CardTitle>Doctors</CardTitle>
       </CardHeader>
       <CardContent>
-        {/* Doctor search is temporarily disabled. */}
+        {/* <form onSubmit={searchDoctors} className="flex flex-col sm:flex-row gap-2 mb-6">
+          <Input
+            type="search"
+            value={doctorSearch}
+            onChange={(event) => setDoctorSearch(event.target.value)}
+            placeholder="Cari nama atau spesialisasi dokter"
+            aria-label="Cari dokter"
+            className="h-10"
+          />
+          <Button type="submit" className="sm:w-auto">Cari</Button>
+        </form> */}
         {doctors.length === 0 ? (
           <p className="text-gray-600">Tidak ada dokter yang sesuai.</p>
         ) : (
