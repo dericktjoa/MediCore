@@ -94,7 +94,6 @@ router.get('/all', async (req, res) => {
   }
 });
 
-/*
 router.get('/search', async (req, res) => {
   try {
     const doctors = await Doctor.find(buildDoctorSearchFilter(req.query.q))
@@ -105,7 +104,6 @@ router.get('/search', async (req, res) => {
     res.status(500).send({ error: 'Server error' });
   }
 });
-*/
 
 
 router.get('/:id/schedule', async (req, res) => {
