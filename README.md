@@ -4,16 +4,8 @@ MediCore adalah aplikasi manajemen rumah sakit berbasis web untuk mengelola
 pasien, dokter, appointment, jadwal dokter, dan resep obat. Aplikasi memiliki
 tiga jenis pengguna: pasien, dokter, dan admin.
 
-## Pilihan Menjalankan Aplikasi
-
-Ada dua cara utama untuk menjalankan MediCore:
-
-1. **Pull image dari Docker Hub** — tidak membutuhkan source code untuk runtime.
-2. **Build image dari source code lokal** — digunakan saat mengembangkan atau
-   menguji perubahan code.
-
-Pada kedua cara tersebut, frontend React dan backend Express berjalan dalam
-satu container aplikasi. MongoDB tetap berjalan sebagai container terpisah.
+Frontend React dan backend Express berjalan dalam satu container aplikasi.
+MongoDB tetap berjalan sebagai container terpisah.
 
 ## Prasyarat
 
@@ -28,46 +20,11 @@ docker version
 docker compose version
 ```
 
-## Cara 1: Build Image dari Source Code Lokal
-
-Gunakan cara ini saat mengembangkan atau menguji perubahan code. Jalankan dari
-root repository:
-
-```powershell
-git clone https://github.com/dericktjoa/MediCore.git
-cd MediCore
-```
-
-Dockerfile menggunakan multi-stage build: frontend dibuild terlebih dahulu,
-kemudian hasil build frontend dan backend disalin ke image runtime.
-
-```powershell
-docker build -t plankboard/medicore:local .
-```
-
-Verifikasi image:
-
-```powershell
-docker image ls plankboard/medicore
-```
-
-## Cara 2: Pull Image dari Docker Hub
-
-Cara ini menjalankan image yang sudah dibuild dan dipublikasikan ke Docker Hub.
-Source code backend dan frontend tidak diperlukan untuk runtime. Pull seluruh
-image yang digunakan project dalam satu bagian:
-
-```powershell
-docker pull plankboard/medicore:1.1.0
-docker pull mongo:7
-docker pull ubuntu:22.04
-```
-
 ## Menjalankan dengan Docker Compose
 
 File `docker-compose.yml` mendefinisikan service, network, volume, port, dan
-environment variable. Service aplikasi menggunakan `image:`, bukan build dari
-source code lokal.
+environment variable. Service aplikasi menggunakan image Docker Hub sesuai
+`DOCKERHUB_USERNAME` dan `APP_VERSION`.
 
 Salin template environment:
 
@@ -79,8 +36,16 @@ Isi `.env` dengan tag dan secret yang digunakan:
 
 ```text
 DOCKERHUB_USERNAME=plankboard
-APP_VERSION=1.1.0
+APP_VERSION=1.0.0
+MONGO_URI=mongodb://mongodb:27017/medicore
+PORT=5000
 JWT_SECRET=ganti-dengan-secret-lokal-yang-kuat
+```
+
+Pull image untuk seluruh service:
+
+```powershell
+docker compose pull
 ```
 
 Jalankan seluruh service:
@@ -107,60 +72,58 @@ Buat data awal:
 docker compose exec app npm run data
 ```
 
-## Menjalankan Secara Manual
+## Memperbarui App Saja
+
+Untuk mengganti image `app` tanpa menghentikan service `mongodb` dan `os`,
+ubah nilai `APP_VERSION` di `.env`, lalu jalankan perintah berikut:
 
 ```powershell
-$appImage = "plankboard/medicore:local"
-# Untuk image Docker Hub, gunakan:
-# $appImage = "plankboard/medicore:1.1.0"
+docker compose stop app
+docker compose rm -f app
+docker compose pull app
+docker compose create app
+docker compose start app
 ```
 
-Buat resource Docker jika belum ada:
+Nilai `APP_VERSION` pada `.env` menentukan versi image `app` yang digunakan
+oleh Docker Compose. Periksa status service setelah pembaruan:
 
 ```powershell
-docker network create medicore-network
-docker volume create mongodb-data
+docker compose ps
 ```
 
-Jalankan MongoDB, OS demonstrasi, dan aplikasi:
+## Push ke Main dan Membuat Tag
+
+Setelah perubahan selesai dan sudah diuji, jalankan dari root repository:
 
 ```powershell
-docker run -d `
-  --name medicore-mongodb `
-  --network medicore-network `
-  --network-alias mongodb `
-  -p 27017:27017 `
-  -v mongodb-data:/data/db `
-  mongo:7
-
-docker run -d `
-  --name medicore-os `
-  --network medicore-network `
-  ubuntu:22.04 `
-  sleep infinity
-
-docker run -d `
-  --name medicore-app `
-  --network medicore-network `
-  -p 5000:5000 `
-  -e MONGO_URI=mongodb://mongodb:27017/medicore `
-  -e PORT=5000 `
-  -e JWT_SECRET=local-development-secret `
-  $appImage
+git switch main
+git add .
+git commit -m "Update documentation"
+git tag v1.0.0
+git push origin main
+git push origin v1.0.0
 ```
 
-Periksa container dan log aplikasi:
+Ganti `v1.0.0` dengan nomor versi yang sesuai. Pastikan branch aktif adalah
+`main`. Tag dengan format `vMAJOR.MINOR.PATCH` digunakan untuk menandai versi
+rilis.
 
-```powershell
-docker ps
-docker logs medicore-app
-```
+## CI/CD
 
-Jalankan data awal:
+Workflow [ci-cd.yml](.github/workflows/ci-cd.yml) berjalan saat ada pull request
+ke `main`, push ke `main`, atau push tag dengan format `v*.*.*`.
 
-```powershell
-docker exec medicore-app npm run data
-```
+Tahapan CI/CD:
+
+- Memvalidasi file workflow menggunakan `actionlint`.
+- Menginstal dependency, menjalankan test frontend dan backend, serta build
+  frontend.
+- Memeriksa konfigurasi Docker Compose dan build Docker image.
+- Saat terjadi push, login ke Docker Hub menggunakan GitHub Secrets, lalu
+  build dan publish image MediCore.
+- Memberi tag image berdasarkan branch dan tanggal, serta versi semantik dari
+  tag Git.
 
 Image MediCore berisi backend Express, dependency backend, frontend React
 production, dan Node.js runtime. MongoDB, data database, network, volume, dan
@@ -195,24 +158,6 @@ image atau source code yang sedang dijalankan.
 - Mengelola akun dokter dan admin.
 - Mengelola status pasien.
 
-## Arsitektur Container
-
-```text
-Browser
-   |
-   v
-medicore-app:5000
-   |- React production build
-   `- Express REST API
-          |
-          v
-medicore-mongodb:27017
-```
-
-Frontend production disajikan oleh Express dari container aplikasi yang sama.
-Backend terhubung ke MongoDB melalui hostname Docker `mongodb`, bukan
-`localhost`.
-
 ## Struktur Project
 
 ```text
@@ -231,6 +176,3 @@ Backend terhubung ke MongoDB melalui hostname Docker `mongodb`, bukan
 |---|---|
 | `5000` | Frontend production dan REST API MediCore |
 | `27017` | MongoDB |
-
-Port `0` hanya digunakan oleh test backend untuk mendapatkan port sementara
-secara otomatis.
